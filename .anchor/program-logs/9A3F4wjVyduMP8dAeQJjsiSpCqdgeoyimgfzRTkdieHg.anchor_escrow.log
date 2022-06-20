@@ -1,0 +1,72 @@
+Streaming transaction logs mentioning 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg. Confirmed commitment
+Transaction executed in slot 142487132:
+  Signature: 3dwTmQCgNkVkKGi2hmr86h1DyEjv1VPYm3UPgADVQRQfbRkF8XNTyaB7PYmvo7VF4Ys5rYnFR1erL5UCs4SuebkY
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Init
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program log: Acer 6/5
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 29562 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487137:
+  Signature: 3cB5eniVmqUcmRd2JUcjHKXAKCAEUXi4tVi7dHnYyUNcoCEbv6uTVyUGQ2LUHj18KvtH1N97zsNyu1pRVTSdyGSZ
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Stake
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 17875 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487144:
+  Signature: XeUZBPWgp7SepMPkGkZfKDpCbL8QUqDUnTcYCiSPhrE2w7EdjzBHxzqVqBtKJ4Rbe9HE8mC4kWpHdeyAPpc2fkt
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Stake
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 19375 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487149:
+  Signature: a2UcXm7n9zEjKeSr8RKjCix8tMcHUB8fCti42c5DFCJpbnEehT7PUzqUDAXswFKd8UxfW8DrWBj7Ljp8bkRtQib
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Cancel
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 4761 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487154:
+  Signature: 3JDEBjRrj7A3krnktg4JUHhFNjwWDDiPjtifJdTjvty8CzCYxMwmWeMEUn39K6ahDZjWStBDt9UFRAeDzprDoo8r
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Release
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 5844 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487158:
+  Signature: 5UHe7FBcNKEb2MhW2fPxyijaadK5iRx72Wr5yV5Y6aZZTxYQKeAkhtPZDjuE1ocAi6aEto61SNtr3wEgM7BvDvfB
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Modify
+    Program 11111111111111111111111111111111 invoke [2]
+    Program 11111111111111111111111111111111 success
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 6981 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
+Transaction executed in slot 142487162:
+  Signature: 2eZhnCnUzshe3BiRDoNeP4wPHkKmiKbQj9F2Z9qneJZQWecCWKkdDPLRAaJYKuobu19kRswABD6uChCBZQ5y5zH7
+  Status: Ok
+  Log Messages:
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg invoke [1]
+    Program log: Instruction: Modify
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg consumed 4676 of 200000 compute units
+    Program 9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg success
