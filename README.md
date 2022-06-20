@@ -1,13 +1,4 @@
-# Sol Native Token Escrow Contract
+# Sol Native Token Bet Contract
 Climb up! Acer!!
 
-### Initialize
-
-### Stake
-
-### Cancel
-
-### Release
-
-### Modify
 
