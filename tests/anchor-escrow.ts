@@ -3,57 +3,53 @@ import { Program } from '@project-serum/anchor';
 import NodeWallet from '@project-serum/anchor/dist/cjs/nodewallet';
 import { AnchorEscrow } from '../target/types/anchor_escrow';
 import { PublicKey, SystemProgram, Transaction, Connection, Commitment } from '@solana/web3.js';
-import { TOKEN_PROGRAM_ID, Token } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, Token, u64 } from "@solana/spl-token";
 import { assert } from "chai";
 
-describe('mars-escrow', () => {
+describe('solbet_contract', () => {
   const commitment: Commitment = 'processed';
-  // const connection = new Connection('https://api.devnet.solana.com', { commitment, wsEndpoint: 'wss://api.devnet.solana.com/' });
-  // const options = anchor.Provider.defaultOptions();
-  // const wallet = NodeWallet.local();
-  // let provider = new anchor.Provider(connection, wallet, options);
-  const provider = anchor.Provider.env();
+  const connection = new Connection('https://api.devnet.solana.com', { commitment, wsEndpoint: 'wss://api.devnet.solana.com/' });
+  const options = anchor.Provider.defaultOptions();
+  const wallet = NodeWallet.local();
+  let provider;
+  provider = new anchor.Provider(connection, wallet, options);
+  provider = anchor.Provider.env();
   console.log("Test Start" /*, provider.connection._rpcEndPoint*/);
   anchor.setProvider(provider);
 
   const idl = JSON.parse(
-    require("fs").readFileSync("./target/idl/anchor_escrow.json", "utf8")
+    require("fs").readFileSync("./target/idl/solbet_contract.json", "utf8")
   );
-  const programId = new anchor.web3.PublicKey("9A3F4wjVyduMP8dAeQJjsiSpCqdgeoyimgfzRTkdieHg");
+  const programId = new anchor.web3.PublicKey("BWVuwvBhFG3nnUexc5CGCzGwELP3eK9oymPCtUiDQXxC");
   const program = new anchor.Program(idl, programId);
-
-  let escrow_account_pda = null;
-  let escrow_account_bump = null;
 
   let vault_account_pda = null;
   let vault_account_bump = null;
 
-  let user_escrow_account_pda = null;
-
-  let stakers = [];
-  let staker_count = 2;
-
+  let players = [];
+  let player_count = 2;
   let payer = new anchor.web3.Keypair();
 
-  for (let i = 0; i < staker_count; i++) {
-    stakers[i] = new anchor.web3.Keypair();
+  for (let i = 0; i < player_count; i++) {
+    players[i] = new anchor.web3.Keypair();
   }
 
 
-  let stake_amount = 100000000 //0.1 sol
+  let bet_amount = 100000000 //0.1 sol
 
-  it("Funding stakers", async () => {
+  it("Funding players", async () => {
     await provider.connection.confirmTransaction(
-      await provider.connection.requestAirdrop(payer.publicKey, 2000000000),
+      await provider.connection.requestAirdrop(payer.publicKey, 2000000000), // 2 SOL
       "processed"
     );
-    for (let i = 0; i < staker_count; i++) {
+
+    for (let i = 0; i < player_count; i++) {
 
       let trx = new anchor.web3.Transaction();
       trx.add(anchor.web3.SystemProgram.transfer({
         fromPubkey: payer.publicKey,
-        toPubkey: stakers[i].publicKey,
-        lamports: 900000000
+        toPubkey: players[i].publicKey,
+        lamports: 600000000 //0.6SOL
       }));
       let sig = await anchor.web3.sendAndConfirmTransaction(
         provider.connection,
@@ -62,18 +58,15 @@ describe('mars-escrow', () => {
       )
     }
   });
-
-  it("Init Escrow", async () => {
-    //escrow account
-    const [_escrow_account_pda, _escrow_account_bump] = await PublicKey.findProgramAddress(
-      [Buffer.from(anchor.utils.bytes.utf8.encode("escrow"))],
-      program.programId
-    );
-    escrow_account_pda = _escrow_account_pda;
-    escrow_account_bump = _escrow_account_bump;
-
-    console.log("escrow account pda,bump", escrow_account_pda.toString(), _escrow_account_bump.toString())
-
+  it("Init Lottery", async () => {
+    //event istener
+    program.addEventListener('BetResult', (e, s) => {
+      console.log('Bet Result In Slot ', s);
+      console.log('player', e.player.toString());
+      console.log('amount', e.amount.toString());
+      console.log('prize_amount', e.prize_amount.toString());
+      console.log('ts', e.ts.toString());
+    });
     //valut account
     const [_vault_account_pda, _vault_account_bump] = await PublicKey.findProgramAddress(
       [Buffer.from(anchor.utils.bytes.utf8.encode("vault"))],
@@ -86,304 +79,141 @@ describe('mars-escrow', () => {
 
     await program.rpc.init(vault_account_bump, {
       accounts: {
-        escrowAccount: escrow_account_pda,
         vaultAccount: vault_account_pda,
         payer: provider.wallet.publicKey,
         systemProgram: anchor.web3.SystemProgram.programId,
       }
     });
-
-    let _escrowAccount = await program.account.escrowAccount.fetch(
-      escrow_account_pda
-    );
-    assert.ok(_escrowAccount.index.toNumber() == 0);
-
-
   });
 
-  it("stake should fail with insufficient funds", async () => {
-    // get current index
-    let _escrowAccount = await program.account.escrowAccount.fetch(
-      escrow_account_pda
+  it("Deposit vault", async () => {
+    let balance1 = await provider.connection.getBalance(vault_account_pda);
+    // deposit 0.6SOL
+    await program.rpc.deposit(
+      new anchor.BN(600000000),
+      {
+        accounts: {
+          depositor: payer.publicKey,
+          vaultAccount: vault_account_pda,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        },
+        signers: [payer]
+      }
     );
-    let stake_index = _escrowAccount.index.toNumber();
 
-    //get user escrow account pda
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[0].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-    user_escrow_account_pda = _user_escrow_account_pda;
-    console.log("user escrow account pda, dump", _user_escrow_account_pda, _user_escrow_account_bump);
+    let balance2 = await provider.connection.getBalance(vault_account_pda);
+    console.log("balance change after deposit", (balance2 - balance1) / anchor.web3.LAMPORTS_PER_SOL);
+  });
 
-    // stake
+  it("Withdraw from vault fails without admin", async () => {
+    let balance1 = await provider.connection.getBalance(vault_account_pda);
+    // withdraw 0.1 SOL
+    let error_code = 0;
     try {
-      await program.rpc.stake(
-        new anchor.BN(stake_amount * 100000),
+      await program.rpc.withdraw(
+        new anchor.BN(100000000),
         {
           accounts: {
-            staker: stakers[0].publicKey,
+            withdrawer: payer.publicKey,
             vaultAccount: vault_account_pda,
-            escrowAccount: escrow_account_pda,
-            userEscrowAccount: _user_escrow_account_pda,
             systemProgram: anchor.web3.SystemProgram.programId,
-            rent: anchor.web3.SYSVAR_RENT_PUBKEY,
           },
-          signers: [stakers[0]]
+          signers: [payer]
         }
       );
     } catch (error) {
-      assert(error.code == 2003); //a raw constraint was violated
+      error_code = error.code;
     }
+    let balance2 = await provider.connection.getBalance(vault_account_pda);
+    console.log("balance change after withdraw", (balance1 - balance2) / anchor.web3.LAMPORTS_PER_SOL);
+    assert.ok(error_code === 2003);
   });
 
-  it("stake (2 users with his own wallet) success with enough funds", async () => {
-    let first_index = -1;
-
-    for (let i = 0; i < staker_count; i++) {
-
-      let _escrowAccount = await program.account.escrowAccount.fetch(
-        escrow_account_pda
-      );
-      let stake_index = _escrowAccount.index.toNumber();
-      if (first_index < 0)
-        first_index = stake_index;
-
-      //get user escrow account pda
-      const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-        [stakers[i].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-          new anchor.BN(stake_index).toString()
-        ))],
-        program.programId
-      );
-      user_escrow_account_pda = _user_escrow_account_pda;
-      console.log("user escrow account pda, dump", _user_escrow_account_pda.toString(), _user_escrow_account_bump);
-
-      // stake
-      await program.rpc.stake(
-        new anchor.BN(stake_amount),
-        {
-          accounts: {
-            staker: stakers[i].publicKey,
-            vaultAccount: vault_account_pda,
-            escrowAccount: escrow_account_pda,
-            userEscrowAccount: _user_escrow_account_pda,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [stakers[i]]
+  it("Withdraw from vault succeeds with after changing admin.", async () => {
+    //set admin
+    await program.rpc.setAdmin(
+      {
+        accounts: {
+          admin: provider.wallet.publicKey,
+          newAdmin: payer.publicKey,
+          vaultAccount: vault_account_pda,
+          systemProgram: anchor.web3.SystemProgram.programId
         }
-      );
-    }
-    let _escrowAccount = await program.account.escrowAccount.fetch(
-      escrow_account_pda
-    );
-    // Check staker index change
-    assert.ok(first_index + staker_count == _escrowAccount.index.toNumber());
-  });
-
-  it("cancel first stake fails with wrong signer", async () => {
-    // get user escrow account
-    let stake_index = 0;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[stake_index].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-
-    let balance_before = await provider.connection.getBalance(stakers[0].publicKey);
-    try {
-      await program.rpc.cancel(
-        new anchor.BN(stake_index),
-        {
-          accounts: {
-            staker: stakers[stake_index].publicKey,
-            vaultAccount: vault_account_pda,
-            userEscrowAccount: _user_escrow_account_pda,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [stakers[1]]
-        }
-      );
-    } catch (error) { 
-      assert.ok(error.code = 2001); // A has_one constraint was violated
-    }
-
-  });
-
-  it("cancel first stake success with correct signer", async () => {
-    // get user escrow account
-    let stake_index = 0;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[0].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-
-    let balance_before = await provider.connection.getBalance(stakers[0].publicKey);
-    await program.rpc.cancel(
-      new anchor.BN(stake_index),
-      {
-        accounts: {
-          staker: stakers[stake_index].publicKey,
-          vaultAccount: vault_account_pda,
-          userEscrowAccount: _user_escrow_account_pda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        },
-        signers: [stakers[stake_index]]
       }
     );
-    let balance_after = await provider.connection.getBalance(stakers[stake_index].publicKey);
-    console.log("stake_amount", stake_amount, "balance change", balance_after - balance_before);
-    assert.ok (balance_after - balance_before >= stake_amount)
 
-  });
-
-  it("release should fail with wrong signer", async () => {
-    let receiver = new anchor.web3.Keypair();
-    console.log("receiver: ", receiver.publicKey.toString());
-    let stake_index = 0;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[0].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-    // release
-    try {
-      await program.rpc.release(
-        new anchor.BN(stake_amount),
-        {
-          accounts: {
-            staker: stakers[stake_index].publicKey,
-            receiver: receiver.publicKey,
-            escrowAccount: escrow_account_pda,
-            vaultAccount: vault_account_pda,
-            userEscrowAccount: _user_escrow_account_pda,
-            systemProgram: anchor.web3.SystemProgram.programId,
-          },
-          signers: [stakers[1]]
-        }
-      );
-    } catch (error) {
-      assert.ok(error.code = 2001); // A has_one constraint was violated
-    }
-
-  });
-
-  it("release half success with correct signer", async () => {
-    // get current index
-    let stake_index = 1;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[stake_index].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-    const release_amount = stake_amount/2;
-    //check user escrow account
-    let _uea = await program.account.userEscrowAccount.fetch(
-      _user_escrow_account_pda
-    );
-    console.log("uea amount", _uea.amount.toNumber());
-    // console.log("valut balance", await provider.connection.getBalance(vault_account_pda));
-    //end: check
-    let receiver = new anchor.web3.Keypair();
-    console.log("receiver: ", receiver.publicKey.toString());
-    // console.log("program.account", program.account);
-    // stake
-    await program.rpc.release(
-      new anchor.BN(release_amount), // release amount
+    let balance1 = await provider.connection.getBalance(vault_account_pda);
+    // withdraw 0.01 SOL
+    let error_code = 0;
+    await program.rpc.withdraw(
+      new anchor.BN(10000000),
       {
         accounts: {
-          staker: stakers[stake_index].publicKey,
-          receiver: receiver.publicKey,
-          escrowAccount: escrow_account_pda,
+          withdrawer: payer.publicKey,
           vaultAccount: vault_account_pda,
-          userEscrowAccount: _user_escrow_account_pda,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
-        signers: [stakers[stake_index]]
+        signers: [payer]
       }
     );
-    let receiver_balance = await provider.connection.getBalance(receiver.publicKey);
-    console.log("receiver balance", receiver_balance, "release amount", release_amount);
-    assert.ok(receiver_balance >= release_amount);
-      // get updated amount
-    let user_escrow_account = await program.account.userEscrowAccount.fetch(_user_escrow_account_pda);
-    console.log("updated amount", user_escrow_account.amount.toNumber());
+    let balance2 = await provider.connection.getBalance(vault_account_pda);
+    console.log("balance change after withdraw", (balance1 - balance2) / anchor.web3.LAMPORTS_PER_SOL);
   });
 
-  it("Add 0.1 SOL to existing stake account", async () => {
-    let stake_index = 1;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[stake_index].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
+
+  const delay = (time) => new Promise(resolve => setTimeout(resolve, time));
+
+  it("Bet success with enough funds", async () => {
+    let balance1 = await provider.connection.getBalance(vault_account_pda);
+    const player = players[0];
+    //create bet account
+    const [bet_account_pda, bet_account_bump] = await PublicKey.findProgramAddress(
+      [player.publicKey.toBuffer()],
       program.programId
     );
-    const new_amount = stake_amount/2 + stake_amount;
-    //check user escrow account
-    let uea_account = await program.account.userEscrowAccount.fetch(
-      _user_escrow_account_pda
-    );
-    console.log("uea amount brefore call", uea_account.amount.toNumber());
-    // smodify
-    await program.rpc.modify(
-      new anchor.BN(new_amount), // new amount
+
+    await program.rpc.createBetAccount(
+      bet_account_bump,
       {
         accounts: {
-          staker: stakers[stake_index].publicKey,
-          vaultAccount: vault_account_pda,
-          userEscrowAccount: _user_escrow_account_pda,
-          systemProgram: anchor.web3.SystemProgram.programId,
+          player: player.publicKey,
+          betAccount: bet_account_pda,
+          systemProgram: anchor.web3.SystemProgram.programId
         },
-        signers: [stakers[stake_index]]
-      }
-    );
-    let uea_account_new = await program.account.userEscrowAccount.fetch(_user_escrow_account_pda);
-    console.log("uea amount after call", uea_account_new.amount.toNumber());
-    assert.ok(uea_account_new.amount.toNumber() == new_amount);
-  });
+        signers: [player]
+      })
 
-  it("Reduce 0.1 SOL to existing stake account", async () => {
-    let stake_index = 1;
-    const [_user_escrow_account_pda, _user_escrow_account_bump] = await PublicKey.findProgramAddress(
-      [stakers[stake_index].publicKey.toBuffer(), Buffer.from(anchor.utils.bytes.utf8.encode(
-        new anchor.BN(stake_index).toString()
-      ))],
-      program.programId
-    );
-    const new_amount = stake_amount/2;
-    //check user escrow account
-    let uea_account = await program.account.userEscrowAccount.fetch(
-      _user_escrow_account_pda
-    );
-    console.log("uea amount brefore call", uea_account.amount.toNumber());
-    let staker_balance = await provider.connection.getBalance(stakers[stake_index].publicKey);
-
-    // smodify
-    await program.rpc.modify(
-      new anchor.BN(new_amount), // new amount
+    // play
+    await program.rpc.bet(
+      new anchor.BN(bet_amount),
       {
         accounts: {
-          staker: stakers[stake_index].publicKey,
+          player: player.publicKey,
           vaultAccount: vault_account_pda,
-          userEscrowAccount: _user_escrow_account_pda,
+          betAccount: bet_account_pda,
           systemProgram: anchor.web3.SystemProgram.programId,
         },
-        signers: [stakers[stake_index]]
+        signers: [player]
       }
     );
-    let uea_account_new = await program.account.userEscrowAccount.fetch(_user_escrow_account_pda);
-    console.log("uea amount after call", uea_account_new.amount.toNumber());
-    assert.ok(uea_account_new.amount.toNumber() == new_amount);
-    // check staker balance
-    let staker_balance_new = await provider.connection.getBalance(stakers[stake_index].publicKey);
-    console.log("staker balance change", staker_balance_new - staker_balance);
+
+    let balance2 = await provider.connection.getBalance(vault_account_pda);
+    console.log("balance change after bet", (balance2 - balance1) / anchor.web3.LAMPORTS_PER_SOL);
+    // claim prize
+    balance1 = await provider.connection.getBalance(bet_account_pda);
+    console.log("balance before claim", balance1 / anchor.web3.LAMPORTS_PER_SOL);
+    await program.rpc.claimPrize({
+      accounts: {
+        player: player.publicKey,
+        betAccount: bet_account_pda,
+        systemProgram: anchor.web3.SystemProgram.programId
+      },
+      signers: [player]
+    });
+    balance1 = await provider.connection.getBalance(bet_account_pda);
+    console.log("balance after claim", balance1 / anchor.web3.LAMPORTS_PER_SOL);
+
+    // await delay(20000);
   });
 
 });
